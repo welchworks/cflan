@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # steven@makeitwork.cloud
-# GitHub URL
-# https://blog.cloudflare.com/python-cloudflare/
+# https://github.com/welchworks/cflan/blob/main/set_dns.py
 
 import socket
 import CloudFlare
@@ -10,12 +9,17 @@ import yaml
 import subprocess
 
 print("Getting SOPS encrypted values from sops_vars.yaml ...")
-r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE)
+try:
+    r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE)
+except FileNotFoundError:
+    sys.exit("\033[5mFAILED!\033[0m SOPS must be installed and configured to use this script!")
+
+print("Getting YAML variables from SOPS output...")
 sops_vars = yaml.safe_load(r.stdout.decode('utf-8'))
 
 print("Using local IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
 
-print("Setting CloudFlare access info...")
+print("Initiating CloudFlare object using API Token...")
 cf = CloudFlare.CloudFlare(token = sops_vars['cf_token'])
 
 print("Getting CloudFlare DNS Zone ID and Name...")
@@ -26,11 +30,13 @@ print("Attempting to get existing DNS record for " + socket.gethostname() + "." 
 try:
     dns_id = cf.zones.dns_records.get(zone_id, params={'name':socket.gethostname() + '.' + zone_name, 'match':'all', 'type':'A'})[0]['id']
 except:
+    print("Record not found...")
     print("Creating new record for " + socket.gethostname() + "." + sops_vars['cf_domain_name'] + " ...")
     try:
         cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname())})
     except CloudFlare.exceptions.CloudFlareAPIError as e:
         sys.exit('/zones.dns_records.post %s - %d %s' % (e, e, e))
+    print("Success!")
     sys.exit()
 
 print("Getting IP address for existing record...")
@@ -50,3 +56,5 @@ try:
     cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname() + '.local')})
 except CloudFlare.exceptions.CloudFlareAPIError as e:
     sys.exit('/zones.dns_records.post %s - %d %s' % (e, e, e))
+
+print("Success!")
