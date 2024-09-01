@@ -1,18 +1,38 @@
 #!/usr/bin/env python3
 # steven@makeitwork.cloud
 # https://github.com/welchworks/cflan/blob/main/set_dns.py
+# To run as NetworkManager script, place in /etc/NetworkManager/disapatcher.d/
+# Accepts two optional positional arguments: 1) the NIC interface name, 2) the action, i.e. "up"
 
 import socket
 import CloudFlare
 import sys
 import yaml
 import subprocess
+import netifaces
+
+print("Parsing NetworkManager arguments...")
+try:
+    if netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] != socket.gethostbyname(socket.gethostname()):
+        print("Failed!")
+        sys.exit("The IP address " + netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] + " for the interface " + sys.argv[1] + " is not the same as the primary IP address of " + socket.gethostbyname(socket.gethostname()) + " .")
+    if sys.argv[2] != "up":
+        print("Failed!")
+        sys.exit("The NetworkManager action '" + sys.argv[2] + "' does not match the required action of 'up'.")
+except KeyError:
+    print("Failed!")
+    sys.exit("IP address for interface not set.")
+except IndexError:
+    print("NetworkManager argument(s) were not set. Proceeding...")
 
 print("Getting SOPS encrypted values from sops_vars.yaml ...")
 try:
     r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE)
+    if r.returncode != 0:
+        sys.exit("Failed getting SOPS values.")
 except FileNotFoundError:
-    sys.exit("\033[5mFAILED!\033[0m SOPS must be installed and configured to use this script!")
+    print("Failed!")
+    sys.exit("SOPS must be installed and configured to use this script.")
 
 print("Getting YAML variables from SOPS output...")
 sops_vars = yaml.safe_load(r.stdout.decode('utf-8'))
