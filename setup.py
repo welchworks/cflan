@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # steven@makeitwork.cloud
 # https://github.com/welchworks/cflan/blob/main/setup.py
 # setup.py - Creates NetworkManager dispatcher script
