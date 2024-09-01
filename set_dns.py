@@ -16,6 +16,8 @@ import yaml
 import subprocess
 import netifaces
 
+print("Using local IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
+
 print("Parsing NetworkManager arguments...")
 try:
     if netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] != socket.gethostbyname(socket.gethostname()):
@@ -46,8 +48,6 @@ except FileNotFoundError:
 print("Getting YAML variables from SOPS output...")
 sops_vars = yaml.safe_load(r.stdout.decode('utf-8'))
 
-print("Using local IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
-
 print("Initiating CloudFlare object using API Token...")
 cf = CloudFlare.CloudFlare(token = sops_vars['cf_token'])
 
@@ -70,7 +70,6 @@ except:
 
 print("Getting IP address for existing record...")
 dns_content = cf.zones.dns_records.get(zone_id, params={'name':socket.gethostname() + '.' + zone_name, 'match':'all', 'type':'A'})[0]['content']
-
 
 print("Evaluating if existing record matches current IP address...")
 if dns_content == socket.gethostbyname(socket.gethostname() + '.local'):
