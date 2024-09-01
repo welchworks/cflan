@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # steven@makeitwork.cloud
 # https://github.com/welchworks/cflan/blob/main/set_dns.py
+#
 # To run as NetworkManager script, place in /etc/NetworkManager/disapatcher.d/
 # Accepts two optional positional arguments: 1) the NIC interface name, 2) the action, i.e. "up"
+#
+# Requires two YAML variables to be set in sops_vars.yaml:
+# cf_token - Cloudflare API Token with DNS edit permissions
+# cf_domain_name - Name of the DNS Zone in Cloudflare, i.e. mydomain.com
 
 import socket
 import CloudFlare
@@ -22,13 +27,17 @@ try:
 except KeyError:
     print("Failed!")
     sys.exit("IP address for interface not set.")
+except ValueError:
+    print("Failed!")
+    sys.exit("Invalid NetworkManager interface value for this script.")
 except IndexError:
     print("NetworkManager argument(s) were not set. Proceeding...")
 
 print("Getting SOPS encrypted values from sops_vars.yaml ...")
 try:
-    r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE)
+    r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     if r.returncode != 0:
+        print(r.stderr.decode('utf-8'))
         sys.exit("Failed getting SOPS values.")
 except FileNotFoundError:
     print("Failed!")
