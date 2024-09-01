@@ -16,10 +16,10 @@ import yaml
 import subprocess
 import netifaces
 
-print("Using local IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
+print("Using IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
 if "127.0.0" in socket.gethostbyname(socket.gethostname()):
     print("Failed!")
-    sys.exit("The local IP address is within the localhost subnet.")
+    sys.exit("The IP address is a value for localhost.")
 
 print("Parsing NetworkManager arguments...")
 try:
