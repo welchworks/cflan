@@ -17,6 +17,9 @@ import subprocess
 import netifaces
 
 print("Using local IP address " + socket.gethostbyname(socket.gethostname() + '.local') + " ...")
+if "127.0.0" in socket.gethostbyname(socket.gethostname()):
+    print("Failed!")
+    sys.exit("The local IP address is within the localhost subnet.")
 
 print("Parsing NetworkManager arguments...")
 try:
