@@ -23,9 +23,9 @@ if "127.0.0" in socket.gethostbyname(socket.gethostname()):
 
 print("Parsing NetworkManager arguments...")
 try:
-    if netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] != socket.gethostbyname(socket.gethostname()):
+    if netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] != socket.gethostbyname(socket.gethostname() + '.local'):
         print("Failed!")
-        sys.exit("The IP address " + netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] + " for the interface " + sys.argv[1] + " is not the same as the primary IP address of " + socket.gethostbyname(socket.gethostname()) + " .")
+        sys.exit("The IP address " + netifaces.ifaddresses(sys.argv[1])[netifaces.AF_INET][0]['addr'] + " for the interface " + sys.argv[1] + " is not the same as the primary IP address of " + socket.gethostbyname(socket.gethostname() + '.local') + " .")
     if sys.argv[2] != "up":
         print("Failed!")
         sys.exit("The NetworkManager action '" + sys.argv[2] + "' does not match the required action of 'up'.")
@@ -71,7 +71,7 @@ except:
     print("Record not found...")
     print("Creating new record for " + socket.gethostname() + "." + yaml_vars['cf_domain_name'] + " ...")
     try:
-        cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname())})
+        cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname() + '.local')})
     except CloudFlare.exceptions.CloudFlareAPIError as e:
         sys.exit('/zones.dns_records.post %s - %d %s' % (e, e, e))
     print("Success!")
