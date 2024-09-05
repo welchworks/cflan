@@ -5,7 +5,7 @@
 # To run as NetworkManager script, place in /etc/NetworkManager/disapatcher.d/
 # Accepts two optional positional arguments: 1) the NIC interface name, 2) the action, i.e. "up"
 #
-# Requires two YAML variables to be set in sops_vars.yaml:
+# Requires two YAML variables to be set in yaml_vars.yaml:
 # cf_token - Cloudflare API Token with DNS edit permissions
 # cf_domain_name - Name of the DNS Zone in Cloudflare, i.e. mydomain.com
 
@@ -38,32 +38,38 @@ except ValueError:
 except IndexError:
     print("NetworkManager argument(s) were not set. Proceeding...")
 
-print("Getting SOPS encrypted values from sops_vars.yaml ...")
+print("Getting unencrypted values from vars.yaml ...")
 try:
-    r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    if r.returncode != 0:
-        print(r.stderr.decode('utf-8'))
-        sys.exit("Failed getting SOPS values.")
-except FileNotFoundError:
-    print("Failed!")
-    sys.exit("SOPS must be installed and configured to use this script.")
+    f = open("vars.yaml", "r")
+    yaml_vars = yaml.safe_load(f.read())
+except:
+    print("Failed to get unencrypted values from vars.yaml ...")
+    print("Getting SOPS encrypted values from yaml_vars.yaml ...")
+    try:
+        r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        if r.returncode != 0:
+            print(r.stderr.decode('utf-8'))
+            sys.exit("Failed getting SOPS values.")
+    except FileNotFoundError:
+        print("Failed!")
+        sys.exit("SOPS must be installed and configured to use this script.")
 
-print("Getting YAML variables from SOPS output...")
-sops_vars = yaml.safe_load(r.stdout.decode('utf-8'))
+    print("Getting YAML variables from SOPS output...")
+    yaml_vars = yaml.safe_load(r.stdout.decode('utf-8'))
 
 print("Initiating CloudFlare object using API Token...")
-cf = CloudFlare.CloudFlare(token = sops_vars['cf_token'])
+cf = CloudFlare.CloudFlare(token = yaml_vars['cf_token'])
 
 print("Getting CloudFlare DNS Zone ID and Name...")
-zone_id = cf.zones.get(params={'per_page':'1', 'name':sops_vars['cf_domain_name']})[0]['id']
-zone_name = cf.zones.get(params={'per_page':'1', 'name':sops_vars['cf_domain_name']})[0]['name']
+zone_id = cf.zones.get(params={'per_page':'1', 'name':yaml_vars['cf_domain_name']})[0]['id']
+zone_name = cf.zones.get(params={'per_page':'1', 'name':yaml_vars['cf_domain_name']})[0]['name']
 
-print("Attempting to get existing DNS record for " + socket.gethostname() + "." + sops_vars['cf_domain_name'] + " ...")
+print("Attempting to get existing DNS record for " + socket.gethostname() + "." + yaml_vars['cf_domain_name'] + " ...")
 try:
     dns_id = cf.zones.dns_records.get(zone_id, params={'name':socket.gethostname() + '.' + zone_name, 'match':'all', 'type':'A'})[0]['id']
 except:
     print("Record not found...")
-    print("Creating new record for " + socket.gethostname() + "." + sops_vars['cf_domain_name'] + " ...")
+    print("Creating new record for " + socket.gethostname() + "." + yaml_vars['cf_domain_name'] + " ...")
     try:
         cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname())})
     except CloudFlare.exceptions.CloudFlareAPIError as e:
@@ -82,7 +88,7 @@ if dns_content == socket.gethostbyname(socket.gethostname() + '.local'):
 print("Deleting existing record...")
 cf.zones.dns_records.delete(zone_id, dns_id)
 
-print("Creating new record for " + socket.gethostname() + "." + sops_vars['cf_domain_name'] + " ...")
+print("Creating new record for " + socket.gethostname() + "." + yaml_vars['cf_domain_name'] + " ...")
 try:
     cf.zones.dns_records.post(zone_id, data={'name':socket.gethostname(), 'type':'A', 'content':socket.gethostbyname(socket.gethostname() + '.local')})
 except CloudFlare.exceptions.CloudFlareAPIError as e:
