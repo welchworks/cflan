@@ -5,7 +5,7 @@
 # To run as NetworkManager script, place in /etc/NetworkManager/disapatcher.d/
 # Accepts two optional positional arguments: 1) the NIC interface name, 2) the action, i.e. "up"
 #
-# Requires two YAML variables to be set in yaml_vars.yaml:
+# Requires two YAML variables to be set in vars.yaml or alternatively as sops encrypted values in sops_vars.yaml:
 # cf_token - Cloudflare API Token with DNS edit permissions
 # cf_domain_name - Name of the DNS Zone in Cloudflare, i.e. mydomain.com
 
@@ -44,17 +44,17 @@ try:
     yaml_vars = yaml.safe_load(f.read())
 except:
     print("Failed to get unencrypted values from vars.yaml ...")
-    print("Getting SOPS encrypted values from yaml_vars.yaml ...")
+    print("Getting sops encrypted values from sops_vars.yaml ...")
     try:
         r = subprocess.run(['sops', 'decrypt', 'sops_vars.yaml'], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         if r.returncode != 0:
             print(r.stderr.decode('utf-8'))
-            sys.exit("Failed getting SOPS values.")
+            sys.exit("Failed getting sops values.")
     except FileNotFoundError:
         print("Failed!")
-        sys.exit("SOPS must be installed and configured to use this script.")
+        sys.exit("sops must be installed and configured to use this script.")
 
-    print("Getting YAML variables from SOPS output...")
+    print("Getting YAML variables from sops output...")
     yaml_vars = yaml.safe_load(r.stdout.decode('utf-8'))
 
 print("Initiating CloudFlare object using API Token...")
